@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pydantic
+numpy
+sentence-transformers
+rank-bm25
+httpx
+pytest
+pytest-asyncio
