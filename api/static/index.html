@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Memory Engine</title>
+
+    <style>
+        :root {
+            color-scheme: dark;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background: #111827;
+            color: #f9fafb;
+        }
+
+        main {
+            width: min(100% - 32px, 900px);
+            margin: 40px auto;
+        }
+
+        h1 {
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #9ca3af;
+            margin-bottom: 28px;
+        }
+
+        section {
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        h2 {
+            margin-top: 0;
+            font-size: 20px;
+        }
+
+        textarea,
+        input {
+            box-sizing: border-box;
+            width: 100%;
+            background: #111827;
+            color: #f9fafb;
+            border: 1px solid #4b5563;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 15px;
+            margin-bottom: 12px;
+        }
+
+        textarea {
+            min-height: 90px;
+            resize: vertical;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 11px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 8px;
+        }
+
+        button:hover {
+            background: #1d4ed8;
+        }
+
+        .secondary {
+            background: #4b5563;
+        }
+
+        .secondary:hover {
+            background: #374151;
+        }
+
+        .message {
+            background: #111827;
+            border-left: 4px solid #2563eb;
+            border-radius: 6px;
+            padding: 12px;
+            margin-top: 14px;
+            white-space: pre-wrap;
+        }
+
+        .memory {
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 8px;
+            padding: 14px;
+            margin-top: 12px;
+        }
+
+        .memory-text {
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+
+        .metadata {
+            color: #9ca3af;
+            font-size: 13px;
+        }
+
+        .empty {
+            color: #9ca3af;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+    <main>
+        <h1>Local Memory Engine</h1>
+        <p class="subtitle">
+            Store useful facts and recall them later.
+        </p>
+
+        <section>
+            <h2>Add a memory</h2>
+
+            <textarea
+                id="memoryInput"
+                placeholder="Example: I prefer PostgreSQL."
+            ></textarea>
+
+            <button onclick="addMemory()">Save memory</button>
+
+            <div id="addResult"></div>
+        </section>
+
+        <section>
+            <h2>Recall memories</h2>
+
+            <input
+                id="queryInput"
+                placeholder="Example: What database does the user prefer?"
+            >
+
+            <button onclick="recallMemories()">Search</button>
+            <button class="secondary" onclick="loadMemories()">
+                Show all memories
+            </button>
+
+            <div id="recallResult"></div>
+        </section>
+
+        <section>
+            <h2>Stored memories</h2>
+            <div id="memoryList">
+                <p class="empty">Click “Show all memories”.</p>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        function escapeHtml(value) {
+            return String(value)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+        }
+
+        function renderMemory(memory, showScore = false) {
+            const score = showScore
+                ? `<div class="metadata">Score: ${memory.score}</div>`
+                : "";
+
+            return `
+                <div class="memory">
+                    <div class="memory-text">
+                        ${escapeHtml(memory.text)}
+                    </div>
+                    <div class="metadata">
+                        Type: ${escapeHtml(memory.type)}
+                    </div>
+                    ${score}
+                </div>
+            `;
+        }
+
+        async function addMemory() {
+            const input = document.getElementById("memoryInput");
+            const result = document.getElementById("addResult");
+            const message = input.value.trim();
+
+            if (!message) {
+                result.innerHTML = `
+                    <div class="message">Please enter a message.</div>
+                `;
+                return;
+            }
+
+            result.innerHTML = `
+                <div class="message">Saving...</div>
+            `;
+
+            try {
+                const response = await fetch("/memory", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ message })
+                });
+
+                const data = await response.json();
+
+                result.innerHTML = `
+                    <div class="message">
+                        ${escapeHtml(data.message)}
+                          
+
+                        Status: ${escapeHtml(data.status)}
+                    </div>
+                `;
+
+                input.value = "";
+                await loadMemories();
+            } catch (error) {
+                result.innerHTML = `
+                    <div class="message">
+                        Could not connect to the API.
+                    </div>
+                `;
+            }
+        }
+
+        async function recallMemories() {
+            const input = document.getElementById("queryInput");
+            const result = document.getElementById("recallResult");
+            const query = input.value.trim();
+
+            if (!query) {
+                result.innerHTML = `
+                    <div class="message">Please enter a question.</div>
+                `;
+                return;
+            }
+
+            result.innerHTML = `
+                <div class="message">Searching...</div>
+            `;
+
+            try {
+                const response = await fetch("/recall", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        query,
+                        top_k: 5,
+                        threshold: 0.45
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.memories.length === 0) {
+                    result.innerHTML = `
+                        <p class="empty">No relevant memories found.</p>
+                    `;
+                    return;
+                }
+
+                result.innerHTML = data.memories
+                    .map(memory => renderMemory(memory, true))
+                    .join("");
+            } catch (error) {
+                result.innerHTML = `
+                    <div class="message">
+                        Could not connect to the API.
+                    </div>
+                `;
+            }
+        }
+
+        async function loadMemories() {
+            const list = document.getElementById("memoryList");
+
+            list.innerHTML = `
+                <p class="empty">Loading...</p>
+            `;
+
+            try {
+                const response = await fetch("/memories?active_only=true");
+                const data = await response.json();
+
+                if (data.memories.length === 0) {
+                    list.innerHTML = `
+                        <p class="empty">No active memories stored.</p>
+                    `;
+                    return;
+                }
+
+                list.innerHTML = data.memories
+                    .map(memory => renderMemory(memory))
+                    .join("");
+            } catch (error) {
+                list.innerHTML = `
+                    <p class="empty">Could not load memories.</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,6 +1,8 @@
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from memory_engine.engine import LocalMemoryEngine
@@ -11,6 +13,13 @@ app = FastAPI(
     description="A local-first memory engine for AI chatbots.",
     version="1.0.0",
 )
+STATIC_DIR = Path(__file__).parent / "static"
+
+
+@app.get("/", include_in_schema=False)
+def home_page() -> FileResponse:
+    return FileResponse(STATIC_DIR / "index.html")
+
 
 engine = LocalMemoryEngine()
 
