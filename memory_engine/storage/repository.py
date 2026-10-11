@@ -53,7 +53,7 @@ class MemoryRepository:
         )
 
     def save(self, memory: Memory) -> Memory:
-        with self.database.connect() as connection:
+        with self.database.connection() as connection:
             connection.execute(
                 """
                 INSERT OR REPLACE INTO memories (
@@ -98,7 +98,7 @@ class MemoryRepository:
         return memory
 
     def get_by_id(self, memory_id: str) -> Memory | None:
-        with self.database.connect() as connection:
+        with self.database.connection() as connection:
             row = connection.execute(
                 "SELECT * FROM memories WHERE id = ?",
                 (memory_id,),
@@ -115,7 +115,7 @@ class MemoryRepository:
 
         query += " ORDER BY created_at ASC"
 
-        with self.database.connect() as connection:
+        with self.database.connection() as connection:
             rows = connection.execute(query, parameters).fetchall()
 
         return [self._row_to_memory(row) for row in rows]
@@ -123,7 +123,7 @@ class MemoryRepository:
     def mark_as_replaced(self, old_id: str, new_id: str) -> None:
         timestamp = utc_now()
 
-        with self.database.connect() as connection:
+        with self.database.connection() as connection:
             connection.execute(
                 """
                 UPDATE memories
@@ -143,7 +143,7 @@ class MemoryRepository:
             )
 
     def delete(self, memory_id: str) -> None:
-        with self.database.connect() as connection:
+        with self.database.connection() as connection:
             connection.execute(
                 "DELETE FROM memories WHERE id = ?",
                 (memory_id,),

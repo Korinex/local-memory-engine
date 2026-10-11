@@ -1,5 +1,7 @@
+from contextlib import contextmanager
 import sqlite3
 from pathlib import Path
+from typing import Iterator
 
 
 class Database:
@@ -11,8 +13,17 @@ class Database:
         connection.row_factory = sqlite3.Row
         return connection
 
+    @contextmanager
+    def connection(self) -> Iterator[sqlite3.Connection]:
+        connection = self.connect()
+        try:
+            with connection:
+                yield connection
+        finally:
+            connection.close()
+
     def initialize(self) -> None:
-        with self.connect() as connection:
+        with self.connection() as connection:
             connection.execute("PRAGMA journal_mode = WAL")
 
             connection.executescript(
@@ -54,6 +65,6 @@ class Database:
             )
 
     def journal_mode(self) -> str:
-        with self.connect() as connection:
+        with self.connection() as connection:
             row = connection.execute("PRAGMA journal_mode").fetchone()
             return str(row[0]).lower()

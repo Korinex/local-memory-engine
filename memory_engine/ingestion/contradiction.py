@@ -16,6 +16,7 @@ TOPIC_WORDS = {
     "editor": {"vscode", "visual studio code", "vim", "emacs"},
     "location": {"live", "lives", "located", "berlin", "amsterdam"},
     "framework": {"next.js", "nextjs", "flutter", "react", "django"},
+    "cloud_provider": {"google cloud", "aws", "azure"},
 }
 
 

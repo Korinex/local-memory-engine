@@ -54,7 +54,14 @@ def classify_memory(text: str) -> MemoryType:
 
     if any(
         word in lowered
-        for word in ["deadline", "goal", "target", "want to", "plan to"]
+        for word in [
+            "deadline",
+            "goal",
+            "target",
+            "want to",
+            "wants to",
+            "plan to",
+        ]
     ):
         return MemoryType.GOAL
 
@@ -114,10 +121,24 @@ def calculate_importance(text: str) -> float:
 
 def convert_to_third_person(message: str) -> str:
     text = message.strip()
+    text = re.sub(
+        r"^Actually,\s*",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
 
     replacements = [
+        (
+            r"^(?:the )?deadline (?:moved|changed) to (.+)$",
+            r"User's project deadline is \1",
+        ),
         (r"^I am building (.+)$", r"User is building \1"),
         (r"^I'm building (.+)$", r"User is building \1"),
+        (r"^I want to learn (.+)$", r"User wants to learn \1"),
+        (r"^I attended (.+)$", r"User attended \1"),
+        (r"^I moved to (.+)$", r"User moved to \1"),
+        (r"^I switched to (.+)$", r"User switched to \1"),
         (r"^I use (.+)$", r"User uses \1"),
         (r"^I prefer (.+)$", r"User prefers \1"),
         (r"^I like (.+)$", r"User likes \1"),

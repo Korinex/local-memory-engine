@@ -92,6 +92,91 @@ def test_low_scores_are_filtered_out():
     assert results == []
 
 
+def test_low_score_relevant_project_is_returned():
+    memory = make_memory(
+        "project",
+        "User is building a Next.js app.",
+        [1.0, 0.0],
+    )
+    memory.type = MemoryType.PROJECT
+    embedder = FakeEmbedder(
+        {
+            "What project is the user building?": [0.4, 0.0],
+        }
+    )
+    search = HybridMemorySearch(embedder=embedder, threshold=0.45)
+
+    results = search.search(
+        "What project is the user building?",
+        [memory],
+    )
+
+    assert [result.memory.id for result in results] == ["project"]
+
+
+def test_low_score_unknown_food_question_returns_no_memory():
+    memory = make_memory(
+        "os",
+        "User uses Arch Linux.",
+        [1.0, 0.0],
+    )
+    embedder = FakeEmbedder(
+        {
+            "What is the user's favourite food?": [0.4, 0.0],
+        }
+    )
+    search = HybridMemorySearch(embedder=embedder, threshold=0.45)
+
+    results = search.search(
+        "What is the user's favourite food?",
+        [memory],
+    )
+
+    assert results == []
+
+
+def test_high_score_unknown_car_question_returns_no_memory():
+    memory = make_memory(
+        "os",
+        "User uses Arch Linux.",
+        [1.0, 0.0],
+    )
+    embedder = FakeEmbedder(
+        {
+            "What car does the user drive?": [0.8, 0.0],
+        }
+    )
+    search = HybridMemorySearch(embedder=embedder, threshold=0.45)
+
+    results = search.search(
+        "What car does the user drive?",
+        [memory],
+    )
+
+    assert results == []
+
+
+def test_high_score_known_food_matches_food_question():
+    memory = make_memory(
+        "food",
+        "User likes pizza.",
+        [1.0, 0.0],
+    )
+    embedder = FakeEmbedder(
+        {
+            "What is the user's favourite food?": [0.8, 0.0],
+        }
+    )
+    search = HybridMemorySearch(embedder=embedder, threshold=0.45)
+
+    results = search.search(
+        "What is the user's favourite food?",
+        [memory],
+    )
+
+    assert [result.memory.id for result in results] == ["food"]
+
+
 def test_top_k_is_respected():
     memories = [
         make_memory("one", "User uses Linux.", [1.0, 0.0, 0.0]),

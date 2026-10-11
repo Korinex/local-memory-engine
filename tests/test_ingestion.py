@@ -27,6 +27,52 @@ def test_first_person_linux_statement_becomes_third_person():
     assert result.memory_type == MemoryType.FACT
 
 
+def test_common_updates_are_normalized_for_recall():
+    examples = [
+        (
+            "Actually, the deadline moved to November 2.",
+            "User's project deadline is November 2.",
+        ),
+        (
+            "Actually, I live in Amsterdam now.",
+            "User lives in Amsterdam now.",
+        ),
+        (
+            "I switched to AWS instead.",
+            "User switched to AWS instead.",
+        ),
+    ]
+
+    for message, expected_text in examples:
+        result = extract(message)
+
+        assert result is not None
+        assert result.text == expected_text
+
+
+def test_learning_and_event_statements_are_normalized():
+    examples = [
+        (
+            "I want to learn machine learning.",
+            "User wants to learn machine learning.",
+        ),
+        (
+            "I moved to Amsterdam.",
+            "User moved to Amsterdam.",
+        ),
+        (
+            "I attended a meeting yesterday.",
+            "User attended a meeting yesterday.",
+        ),
+    ]
+
+    for message, expected_text in examples:
+        result = extract(message)
+
+        assert result is not None
+        assert result.text == expected_text
+
+
 def test_preference_is_classified():
     result = extract("I prefer PostgreSQL.")
 
