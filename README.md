@@ -5,19 +5,49 @@ A small, local memory system for an AI chatbot.
 It can:
 
 - remember useful facts about a user;
+
 - ignore messages such as `hello` and `ok thanks`;
+
 - update a memory when the user gives newer information;
+
 - keep the old version for history;
+
 - find relevant memories later; and
+
 - return nothing when the answer is not stored.
 
 This project uses **Python**, **SQLite**, **Sentence Transformers**, and **FastAPI**. It runs on a normal laptop and does not need a paid API.
+
+## Table of contents
+
+- [The task in simple words](#the-task-in-simple-words)
+- [Main idea](#main-idea)
+- [What is required and what is extra?](#what-is-required-and-what-is-extra)
+- [Project structure](#project-structure)
+- [How to run on Windows](#how-to-run-on-windows)
+- [How the important parts work](#how-the-important-parts-work)
+  - [Ingestion](#1-ingestion)
+  - [Storage](#2-storage)
+  - [Retrieval](#3-retrieval)
+  - [Updates](#4-updates)
+- [API examples](#api-examples)
+  - [Add a memory](#add-a-memory)
+  - [Recall a memory](#recall-a-memory)
+  - [List memories](#list-memories)
+  - [Delete a memory](#delete-a-memory)
+- [Evaluation](#evaluation)
+- [Challenges faced and how I solved them](#challenges-faced-and-how-i-solved-them)
+- [Limitations](#limitations)
+- [If there were 10 million memories](#if-there-were-10-million-memories)
+- [AI assistance disclosure](#ai-assistance-disclosure)
+- [Git history](#git-history)
+- [Submission checklist](#submission-checklist)
 
 ## The task in simple words
 
 The chatbot should be able to understand a conversation like this:
 
-```text
+```
 I use Arch Linux.
 I'm building a Next.js app.
 My project deadline is October 15.
@@ -26,7 +56,7 @@ Actually, the deadline moved to November 2.
 
 Then it should answer:
 
-```text
+```
 What OS does the user use?
 → User uses Arch Linux.
 
@@ -63,21 +93,33 @@ flowchart TD
 ### Required by the recruitment task
 
 - Save useful memories.
+
 - Ignore small talk.
+
 - Store the memory type, source message, and timestamps.
+
 - Handle changed or contradictory information.
+
 - Keep old versions instead of silently deleting them.
+
 - Retrieve memories using local embeddings.
+
 - Return no memories for an unrelated question.
+
 - Persist data after restarting the program.
+
 - Provide these API endpoints:
   - `POST /memory`
   - `POST /recall`
   - `GET /memories`
   - `DELETE /memory/{id}`
+
 - Create at least 30 evaluation cases.
+
 - Explain the design in the README and video.
+
 - Commit the project progressively to GitHub.
+
 - State where AI coding assistants were used.
 
 ### Small extras included
@@ -85,14 +127,16 @@ flowchart TD
 I included a few simple extras:
 
 - BM25 keyword search alongside semantic search.
+
 - Importance scores.
+
 - A small browser UI so the project is easier to demonstrate.
 
 I did **not** add the other optional features such as Docker, latency benchmarks, duplicate merging, or Ollama. The priority was a small core system that is understandable and tested.
 
 ## Project structure
 
-```text
+```
 local-memory-engine/
 ├── README.md
 ├── requirements.txt
@@ -130,26 +174,26 @@ Open **PowerShell** in the project folder.
 
 ### 1. Create the virtual environment
 
-```powershell
+```
 py -3 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
 If activation is blocked:
 
-```powershell
+```
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 ```
 
 Then activate again:
 
-```powershell
+```
 .\.venv\Scripts\Activate.ps1
 ```
 
 ### 2. Install dependencies
 
-```powershell
+```
 python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
@@ -158,31 +202,31 @@ The first embedding run may download `all-MiniLM-L6-v2`. That model is then used
 
 ### 3. Run the tests
 
-```powershell
+```
 python -m pytest -q
 ```
 
 ### 4. Run the evaluation
 
-```powershell
+```
 python evaluation\evaluate.py
 ```
 
 ### 5. Start the application
 
-```powershell
+```
 python -m uvicorn api.app:app --reload
 ```
 
 Open the simple UI:
 
-```text
+```
 http://127.0.0.1:8000
 ```
 
 FastAPI's automatic documentation is also available here:
 
-```text
+```
 http://127.0.0.1:8000/docs
 ```
 
@@ -196,7 +240,7 @@ The ingestion code decides whether a message should become a memory.
 
 Example:
 
-```text
+```
 I prefer PostgreSQL.
 → User prefers PostgreSQL.
 → type: preference
@@ -207,14 +251,18 @@ The current extractor uses simple rules because they are easy to understand and 
 It recognizes memory types such as:
 
 - `fact`
+
 - `preference`
+
 - `project`
+
 - `event`
+
 - `goal`
 
 Small talk is ignored:
 
-```text
+```
 hello
 ok thanks
 cool
@@ -226,12 +274,19 @@ sounds good
 SQLite stores each memory with:
 
 - memory ID;
+
 - text;
+
 - memory type;
+
 - importance;
+
 - original message;
+
 - creation and update time;
+
 - active/inactive status; and
+
 - replacement links.
 
 SQLite WAL mode is enabled. Embeddings are stored as compact NumPy `float32` BLOBs.
@@ -242,7 +297,7 @@ I chose SQLite because it is local, persistent, simple to set up, and does not n
 
 The project uses the local model:
 
-```text
+```
 all-MiniLM-L6-v2
 ```
 
@@ -251,7 +306,9 @@ It creates a 384-dimensional embedding for a memory and for a query. Similar mea
 The search uses:
 
 - dense semantic similarity;
+
 - BM25 keyword matching; and
+
 - a relevance threshold.
 
 The threshold matters because a vector search can always find the *closest* memory, even if every memory is unrelated. If the score is too low, the result is removed and the API returns:
@@ -264,22 +321,25 @@ The threshold matters because a vector search can always find the *closest* memo
 
 Suppose the database contains:
 
-```text
+```
 User's project deadline is October 15.
 ```
 
 Then the user says:
 
-```text
+```
 Actually, the deadline moved to November 2.
 ```
 
 The engine:
 
 1. saves the November 2 memory;
-2. marks the October 15 memory inactive;
-3. links the old memory to the new one; and
-4. keeps the old row for history.
+
+1. marks the October 15 memory inactive;
+
+1. links the old memory to the new one; and
+
+1. keeps the old row for history.
 
 So the latest memory is used for recall, but the old information is not silently lost.
 
@@ -341,19 +401,19 @@ Possible response:
 
 Active memories:
 
-```text
+```
 GET /memories?active_only=true
 ```
 
 All memories, including replaced history:
 
-```text
+```
 GET /memories?active_only=false
 ```
 
 ### Delete a memory
 
-```text
+```
 DELETE /memory/{id}
 ```
 
@@ -362,27 +422,35 @@ DELETE /memory/{id}
 The recruitment task asks for at least 30 cases. The evaluation dataset covers:
 
 - direct facts;
+
 - preferences;
+
 - projects;
+
 - events;
+
 - goals and deadlines;
+
 - changed information;
+
 - several memories in one query;
+
 - small-talk messages; and
+
 - questions where the answer is not stored.
 
 Run it with:
 
-```powershell
+```
 python evaluation\evaluate.py
 ```
 
 Fill in the real results before submitting:
 
 | Result | Value |
-|---|---:|
+| --- | --- |
 | Number of cases | **31** |
-| Passed cases | **31** |
+| Passed cases | **31/31** |
 | Accuracy | **100%** |
 | Unknown questions returning no result | **4/4** |
 
@@ -390,7 +458,7 @@ I will not claim 100% accuracy unless the program actually produces it.
 
 Run all tests with:
 
-```powershell
+```
 python -m pytest -q
 ```
 
@@ -419,8 +487,11 @@ I separated storage, ingestion, retrieval, and API code. That allowed me to test
 This is a student-sized project, so it has limits:
 
 - The extractor uses rules and does not understand every sentence.
+
 - Topic detection uses a small list of known words.
+
 - Searching currently scans the active memories, which is fine for a small dataset.
+
 - The UI is only a simple demo page, not a production application.
 
 ## If there were 10 million memories
@@ -430,8 +501,11 @@ The first problems would be memory usage and the time needed to scan every vecto
 I would improve it with:
 
 - an approximate-nearest-neighbor index such as HNSW or FAISS;
+
 - vector compression or quantization;
+
 - partitioning memories by user; and
+
 - a persistent vector index.
 
 ## AI assistance disclosure
@@ -444,7 +518,7 @@ I used AI coding assistants to help with boilerplate, test ideas, explanations, 
 
 The project was developed in small commits instead of one giant final commit. The history shows the main stages:
 
-```text
+```
 initialize SQLite storage
 add local embeddings and basic search
 add keyword search and hybrid ranking
